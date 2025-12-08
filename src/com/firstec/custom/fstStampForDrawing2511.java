@@ -99,7 +99,7 @@ public class fstStampForDrawing2511 {
         float widthInPt  = pageSize.getWidth();
         float heightInPt = pageSize.getHeight();
 
-        logger.debug("페이지 너비: w={}pt h={} " , widthInPt ,heightInPt);
+//        logger.debug("페이지 너비: w={}pt h={} " , widthInPt ,heightInPt);
 
         //상단 결재정보 x,y
         float xApproval = 30f;

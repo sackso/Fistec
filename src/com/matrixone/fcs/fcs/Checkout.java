@@ -5,6 +5,7 @@
 
 package com.matrixone.fcs.fcs;
 
+import com.dassault_systemes.i3dx.util.ContextUtil;
 import com.firstec.common.helper.PersontUtils;
 import com.firstec.common.util.fstDateUtil;
 import com.firstec.common.util.fstDomainUtil;
@@ -26,6 +27,7 @@ import com.matrixone.fcs.common.TransportUtil;
 import com.matrixone.fcs.fcs.probe.CheckoutProbe;
 import com.matrixone.servlet.Framework;
 import matrix.db.Context;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
@@ -84,14 +86,19 @@ public class Checkout implements Dispatche {
                 logger.debug("var8 {}",orgFileName);
                 fcsContext.setCurrent(item);
                 var5.addFile(item.getSize());
-                InputStream fileInStream = item.getInputStream();//다운로드 받을 파일 읽기
-                InputStream processedFileInStream = fileInStream; // 처리할 파일 스트림
+                byte[] data = IOUtils.toByteArray(item.getInputStream());
+                InputStream fileInStream = new ByteArrayInputStream(data);//다운로드 받을 파일 읽기
+                InputStream processedFileInStream = null;
 
                 //2025-09-15 ; [S] 다운로드 할 PDF를 받아 수정한 파일로 대체 ; shpark
-                String extFileName = orgFileName.substring(orgFileName.lastIndexOf('.'), orgFileName.length());
-                if(".pdf".equalsIgnoreCase(extFileName)) {
+                boolean bIsPdf = isPdf(fileInStream);
+                if(bIsPdf){
                     // PDF 파일인 경우, makeStampPdf에서 도장 찍는 로직을 수행하고 스트림을 반환
-                    processedFileInStream = makeStampPdf2511(getContext(fcsContext), fileInStream, item,request);
+                    fileInStream = new ByteArrayInputStream(data);//다운로드 받을 파일 읽기
+                    Context _ctx = getContext(fcsContext);
+                    processedFileInStream = makeStampPdf2511(_ctx, fileInStream, item,request);
+                }else{
+                    processedFileInStream = new ByteArrayInputStream(data);
                 }
                 //2025-09-15 ; [E] 다운로드 할 PDF를 받아 수정한 파일로 대체 ; shpark
 
@@ -259,8 +266,8 @@ public class Checkout implements Dispatche {
             }
 
             // 하단 이미지는 항상 생성
-            String disUserId = context.getUser();
-            String pDepartmentName = PersontUtils.getDeptName(context, disUserId);
+            String disUserId = "test";//context.getUser();
+            String pDepartmentName = "test dept";//PersontUtils.getDeptName(context, disUserId);
             BufferedImage bottomImage = sfd.createBottomInfos(pDepartmentName, disUserId);
 
             pdfReader = new PdfReader(fileInStream);
@@ -483,6 +490,42 @@ public class Checkout implements Dispatche {
 
         return map;
 
+    }
+    /**
+     * InputStream의 시작 4바이트를 읽어 PDF 매직 넘버(%PDF)와 일치하는지 확인합니다.
+     * * 주의: 이 메서드를 호출한 후에는 InputStream의 스트림 포인터가 읽은 바이트만큼 이동합니다.
+     * 스트림을 재사용해야 한다면, InputStream이 mark/reset을 지원하는지 확인해야 합니다.
+     * * @param is 확인할 InputStream 객체
+     * @return PDF 파일 형식의 데이터 스트림이면 true, 아니면 false를 반환합니다.
+     */
+    public static boolean isPdf(InputStream is) {
+        if (is == null) {
+            return false;
+        }
+
+        try {
+            // PDF 매직 넘버를 읽을 바이트 배열 (4바이트: %PDF)
+            byte[] header = new byte[4];
+
+            // 스트림에서 4바이트를 읽습니다.
+            int bytesRead = is.read(header);
+
+            // 4바이트를 모두 읽지 못했다면 PDF 헤더가 아님
+            if (bytesRead < 4) {
+                return false;
+            }
+
+            // 읽은 바이트를 ASCII 문자열로 변환합니다.
+            String magicNumber = new String(header, "US-ASCII");
+
+            // 모든 PDF 파일은 %PDF로 시작해야 합니다.
+            return magicNumber.startsWith("%PDF");
+
+        } catch (IOException e) {
+            // 스트림 읽기 오류가 발생하면 false 반환
+            e.printStackTrace();
+            return false;
+        }
     }
 
 
