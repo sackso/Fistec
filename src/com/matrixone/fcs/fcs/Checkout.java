@@ -78,12 +78,13 @@ public class Checkout implements Dispatche {
 
         try {
             FcsItemController fic = new FcsItemController(fcsContext, itrCheckoutData);
+            Context _ctx = getContext(fcsContext);
 
             while(fic.hasNext()) {
                 Item item = fic.next();
-                logger.debug("var7 {}",item);
+                logger.debug("var7(item.getPath()) {}",item.getPath());
                 String orgFileName = item.getFileName();
-                logger.debug("var8 {}",orgFileName);
+                logger.debug("var8(orgFileName) {}",orgFileName);
                 fcsContext.setCurrent(item);
                 var5.addFile(item.getSize());
                 byte[] data = IOUtils.toByteArray(item.getInputStream());
@@ -95,7 +96,6 @@ public class Checkout implements Dispatche {
                 if(bIsPdf){
                     // PDF 파일인 경우, makeStampPdf에서 도장 찍는 로직을 수행하고 스트림을 반환
                     fileInStream = new ByteArrayInputStream(data);//다운로드 받을 파일 읽기
-                    Context _ctx = getContext(fcsContext);
                     processedFileInStream = makeStampPdf2511(_ctx, fileInStream, item,request);
                 }else{
                     processedFileInStream = new ByteArrayInputStream(data);
@@ -150,21 +150,23 @@ public class Checkout implements Dispatche {
         String trackUsagePartId= request.getParameter("trackUsagePartId");
 
         // 2025-10-30 ;[S] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
-        HashMap ccd = (HashMap)request.getSession().getAttribute("_STAMP_INFO");
-        if(ccd != null) {
-            if (appDir == null || appDir.isEmpty() || appDir.equals("null")) {
-                appDir = "" + ccd.get("appDir");
-            }
+        try {
+            HashMap ccd = (HashMap) request.getSession().getAttribute("_STAMP_INFO");
+            if (ccd != null) {
+                if (appDir == null || appDir.isEmpty() || appDir.equals("null")) {
+                    appDir = "" + ccd.get("appDir");
+                }
 
-            if (trackUsagePartId == null || trackUsagePartId.isEmpty() || trackUsagePartId.equals("null")) {
-                trackUsagePartId = "" + ccd.get("trackUsagePartId");
+                if (trackUsagePartId == null || trackUsagePartId.isEmpty() || trackUsagePartId.equals("null")) {
+                    trackUsagePartId = "" + ccd.get("trackUsagePartId");
+                }
+                //일괄다운로드 종료시 session 제거
+                request.getSession().setAttribute("_STAMP_INFO", null);
             }
-            //일괄다운로드 종료시 session 제거
-            request.getSession().setAttribute("_STAMP_INFO", null);
-        }
+        }catch (Exception e){}
         // 2025-10-30 ;[E] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
 
-        logger.debug("context {} ", context.toString());
+        logger.debug("context.getUser() {} ", context.getUser());
         DomainObject cadObj = getCADDrawingObject(context, item);
 
         // CAD Drawing 객체를 찾지 못했거나

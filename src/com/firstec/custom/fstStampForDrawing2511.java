@@ -109,12 +109,11 @@ public class fstStampForDrawing2511 {
         float xCompany = widthInPt/2 - 130;
         float yCompany =  heightInPt/2 - 320;
 
+        logger.debug("xApproval : {} , yApproval : {} xCompany : {} , yCompany : {} ", xApproval , yApproval , xCompany , yCompany );
         // 2. 모든 페이지에 결재도장 삽입
         for (int i = 1; i <= pdfDoc.getNumberOfPages(); i++) {
             PdfCanvas canvas = new PdfCanvas(pdfDoc.getPage(i));
 
-            logger.debug("xApproval : {} , yApproval : {} ", xApproval , yApproval );
-            logger.debug("xCompany : {} , yCompany : {} ", xCompany , yCompany );
             // 상단의 결재정보 이미지 추가
             if(approvalStampImages != null && approvalStampImages.getWidth() > 0 && approvalStampImages.getHeight() > 0) {
                 this.combineImageToPdf(approvalStampImages, canvas, xApproval, yApproval);//Top
