@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="true" scanPeriod="30 seconds" debug="true">
+  <jmxConfigurator />
+
+<!--   <property file="C:/R2016x/3DSpace/win_b64/code/bin/enovia.ini"/> -->
+<!--   <property file="C:/enoviaV6R2016x/server/win_b64/code/bin/enovia.ini"/> -->
+
+<!--   <define name="kernelName" class="com.matrixone.util.KernelPropertyDefiner"/> -->
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+    <!-- encoders are assigned by default the type ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+    <encoder>
+<!--       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS,GMT} %-24([%thread]) %-5level %-36logger{36} - %marker |%X{session}| %msg%n%ex</pattern> -->
+        <pattern>%d{HH:mm:ss} | %logger{36} | %-5level | [%class|%method:%L] %n %msg%n%ex</pattern>
+    </encoder>
+
+  </appender>
+  <appender name="SHP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+
+      <!-- rollover daily -->
+      <!--       <fileNamePattern>C:/R2016x/3DSpace/logs/${MX_TRACE_FILE_NAME:-3DXServer}_${kernelName}_%d{yyyy-MM-dd}_%i.log</fileNamePattern> -->
+      <fileNamePattern>C:/R2016x/3DSpace/logs/SHP_%d{yyyy-MM-dd}_%i.log</fileNamePattern>
+
+      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <!-- or whenever the file size reaches 64MB -->
+        <maxFileSize>64MB</maxFileSize>
+      </timeBasedFileNamingAndTriggeringPolicy>
+
+    </rollingPolicy>
+
+    <encoder>
+      <!--       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS,GMT} %-24([%thread]) %-5level %-36logger{36} - %marker |%X{session}| %msg%n%ex</pattern> -->
+      <pattern>%d{HH:mm:ss} | %logger{36} | %-5level | [%class|%method:%L] %n %msg%n%ex</pattern>
+    </encoder>
+
+  </appender>
+  <appender name="ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+
+      <!-- rollover daily -->
+<!--       <fileNamePattern>C:/R2016x/3DSpace/logs/${MX_TRACE_FILE_NAME:-3DXServer}_${kernelName}_%d{yyyy-MM-dd}_%i.log</fileNamePattern> -->
+      <fileNamePattern>C:/R2016x/3DSpace/logs/3DXServer_%d{yyyy-MM-dd}_%i.log</fileNamePattern>
+
+      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <!-- or whenever the file size reaches 64MB -->
+        <maxFileSize>64MB</maxFileSize>
+      </timeBasedFileNamingAndTriggeringPolicy>
+
+    </rollingPolicy>
+
+    <encoder>
+<!--       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS,GMT} %-24([%thread]) %-5level %-36logger{36} - %marker |%X{session}| %msg%n%ex</pattern> -->
+        <pattern>%d{HH:mm:ss} | %logger{36} | %-5level | [%class|%method:%L] %n %msg%n%ex</pattern>
+    </encoder>
+
+  </appender>
+
+  <logger name="matrix.db.*" level="info"/>
+  <logger name="com.matrixone.*" level="info"/>
+  <logger name="SHP" level="debug"/>
+
+  <root level="info">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="SHP" />
+  </root>
+
+</configuration>
+

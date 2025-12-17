@@ -16,6 +16,8 @@ import com.itextpdf.kernel.pdf.*;
 import com.matrixone.apps.domain.DomainConstants;
 import com.matrixone.apps.domain.DomainObject;
 import com.matrixone.apps.domain.util.EnoviaResourceBundle;
+import com.matrixone.apps.domain.util.FrameworkException;
+import com.matrixone.apps.domain.util.MqlUtil;
 import com.matrixone.client.fcs.OutputStreamSource;
 import com.matrixone.client.fcs.http.FcsBadDBChecksumException;
 import com.matrixone.fcs.common.CheckoutData;
@@ -148,12 +150,15 @@ public class Checkout implements Dispatche {
     private static InputStream makeStampPdf2511(Context context, InputStream fileInStream, Item item,HttpServletRequest request) throws Exception {
         //배포에서 호출시에만 stamp 추가
         //배포 객체를 넘겨받아 처리
-        String appDir = request.getParameter("appDir");
-        String trackUsagePartId= request.getParameter("trackUsagePartId");
-
+        String appDir           = request.getParameter("appDir");
+        String trackUsagePartId = request.getParameter("trackUsagePartId");
+        String stDocId          = "";
         // 2025-10-30 ;[S] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
         try {
-            HashMap ccd = (HashMap) request.getSession().getAttribute("_STAMP_INFO");
+//            HashMap ccd = (HashMap) request.getSession().getAttribute("_STAMP_INFO");
+            HashMap ccd = getObjectStreamFrom3dspace(context,item.getFileName());
+//            logger.debug("sessionid {}",request.getSession().getId());
+            logger.debug("_STAMP_INFO => ccd {} ",ccd);
             if (ccd != null) {
                 if (appDir == null || appDir.isEmpty() || appDir.equals("null")) {
                     appDir = "" + ccd.get("appDir");
@@ -162,14 +167,17 @@ public class Checkout implements Dispatche {
                 if (trackUsagePartId == null || trackUsagePartId.isEmpty() || trackUsagePartId.equals("null")) {
                     trackUsagePartId = "" + ccd.get("trackUsagePartId");
                 }
-                //일괄다운로드 종료시 session 제거
-                request.getSession().setAttribute("_STAMP_INFO", null);
+                stDocId          = ""+ccd.get("stDocId");
             }
-        }catch (Exception e){}
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         // 2025-10-30 ;[E] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
 
         logger.debug("context.getUser() {} ", context.getUser());
-        DomainObject cadObj = getCADDrawingObject(context, item);
+        logger.debug("getCADDrawingObject() START " );
+        DomainObject cadObj = getCADDrawingObject(context, item, stDocId);
+        logger.debug("getCADDrawingObject() END " );
 
         // CAD Drawing 객체를 찾지 못했거나
         if (cadObj == null) {
@@ -341,7 +349,7 @@ public class Checkout implements Dispatche {
         // 2025-10-30 ;[E] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
 
         logger.debug("context {} ", context.toString());
-        DomainObject cadObj = getCADDrawingObject(context, item);
+        DomainObject cadObj = getCADDrawingObject(context, item, trackUsagePartId);
 
         // CAD Drawing 객체를 찾지 못했거나
         if (cadObj == null) {
@@ -474,19 +482,34 @@ public class Checkout implements Dispatche {
      * @since 2025-09-16
      * @author shpark
      */
-    private static DomainObject getCADDrawingObject(Context context,Item item) {
+    private static DomainObject getCADDrawingObject(Context context,Item item,String stDocId) throws Exception {
         String type = DomainConstants.TYPE_CAD_DRAWING;
         String name = item.getPath();
+        if(item.getPath() == null || item.getPath().isEmpty() || item.getPath().equals("null")) {
+            try{
+                DomainObject __dObj = new DomainObject(stDocId);
+                String __type = __dObj.getInfo(context, FSTConstants.SELECT_TYPE);
+                String __name = __dObj.getInfo(context, FSTConstants.SELECT_NAME);
+                name = __name;
+                if(!type.equals(__type)) {
+                   return  null;
+                }
+            }catch (Exception e){
+//                e.printStackTrace();
+            }
+        }
         String rev = "*";
         String where = "format[generic].file.locationfile == '" + item.getHashName() + "'";
+        logger.debug("getCADDrawingObject type:{}, name:{}, rev:{}, where:{}",type,name,rev,where);
         DomainObject cadObj = fstDomainUtil.getObjectByTNR(context,type,name,rev,where);
+        logger.debug("cadObj:{}",cadObj);
         return cadObj;
     }
 
     private static Context getContext(FcsContext fcsContext) throws Exception {
 //        Context context = Framework.getContext(fcsContext.getRequestObject().getSession());
         Context context = fstDomainUtil.getContext();
-        logger.debug("context {} ",context);
+        logger.debug("context {} getUser={}",context,context.getUser());
 
         return context;
     }
@@ -537,6 +560,21 @@ public class Checkout implements Dispatche {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private static HashMap getObjectStreamFrom3dspace(Context context,String stFileName) throws Exception {
+        String _path = MqlUtil.mqlCommand(context,"list store STORE select path dump");
+        logger.debug("_path :  {} ",_path);
+        String _fileName = _path + "/___" + stFileName;
+        File f = new File(_fileName);
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
+        HashMap hMap = (HashMap) ois.readObject();
+
+        ois.close();
+        try {
+            f.delete();
+        }catch (Exception e){e.printStackTrace();}
+        return hMap;
     }
 
 
