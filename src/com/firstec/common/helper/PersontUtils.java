@@ -159,7 +159,6 @@ public class PersontUtils {
             }
         }catch (Exception e) {
             e.printStackTrace();
-        }finally {
             orgMap.put("deptCode", "");//부서코드
             orgMap.put("deptName", "");//부서명
         }
