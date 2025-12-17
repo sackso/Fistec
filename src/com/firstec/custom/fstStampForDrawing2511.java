@@ -111,7 +111,8 @@ public class fstStampForDrawing2511 {
 
         logger.debug("xApproval : {} , yApproval : {} xCompany : {} , yCompany : {} ", xApproval , yApproval , xCompany , yCompany );
         // 2. 모든 페이지에 결재도장 삽입
-        for (int i = 1; i <= pdfDoc.getNumberOfPages(); i++) {
+        int pageCount = pdfDoc.getNumberOfPages();
+        for (int i = 1; i <= pageCount; i++) {
             PdfCanvas canvas = new PdfCanvas(pdfDoc.getPage(i));
 
             // 상단의 결재정보 이미지 추가
@@ -139,7 +140,7 @@ public class fstStampForDrawing2511 {
 
         // 3. 문서 닫기
         pdfDoc.close();
-        logger.debug("iText 7을 사용하여 PDF에 워터마크 3개를 성공적으로 추가했습니다.");
+        logger.debug("add pdf stamp image complete pagecnt={} ", pageCount);
     }
 
 
