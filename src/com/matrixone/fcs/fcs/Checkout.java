@@ -124,8 +124,10 @@ public class Checkout implements Dispatche {
 
             return var3;
         } catch (FcsException var15) {
+            var15.printStackTrace();
             throw var15;
         } catch (Exception var16) {
+            var16.printStackTrace();
             throw new FcsException(var16);
         }
     }
@@ -205,18 +207,24 @@ public class Checkout implements Dispatche {
             //stamp 인쇄 여부 flag
             boolean isPrintStamp = appDir != null && appDir.equalsIgnoreCase("fstDistributionDocumentSummary") ? true : false;
 
+            logger.debug("appDir {}     sContainDistId {} ",appDir,sContainDistId);
             if(sContainDistId == null || sContainDistId.isEmpty() || sContainDistId.equals("null")){
+                logger.debug("sContainDistId is null");
                 isPrintStamp = false;
             }else {
+                logger.debug("sContainDistId is not null");
 
                 //DIST 객체의 상태가 배포이후가 아니면 출력하지 않음
                 DomainObject distObj = new DomainObject(sContainDistId);
                 String distCurrent = distObj.getInfo(context, FSTConstants.SELECT_CURRENT);
+                logger.debug("distCurrent {} ",distCurrent);
                 if (!("Deploy,Withdraw,Complete,Dispose".indexOf(distCurrent) > -1)) {
                     isPrintStamp = false;
                 }
+                logger.debug("isPrintStamp {} ",isPrintStamp);
 
                 String sCompanyName = EnoviaResourceBundle.getProperty(context, "fstConfig.System.Watermark.Company.Name");
+                logger.debug("sCompanyName {} ",sCompanyName);
                 companyStampImages = sfd.createCenterCompanyImage(sCompanyName);
 
 
@@ -261,6 +269,7 @@ public class Checkout implements Dispatche {
                         sDates = new String[]{sActualCompletionDate,""};
                         sDepts = new String[]{sDistDepatName,""};
                     }
+                    logger.debug("sDates {}     sDepts {}",sDates,sDepts);
                     approvalStampImages = sfd.createTopApprovalImage(sPlmObjectNo,sDates,sDepts, sRevision);
                 } else {
                     logger.debug("DIST object not found for CAD Drawing. Skipping approval stamps, but will add bottom info.");
