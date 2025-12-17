@@ -143,15 +143,26 @@ public class PersontUtils {
      */
     private static Map<String, String> getOrgNameAndCode(Context context, String orgId) throws FrameworkException {
         Map<String, String> orgMap = new HashMap();
-        DomainObject org = DomainObject.newInstance(context, orgId);
-        StringList infoList = new StringList();
-        infoList.add("attribute[Organization ID]");
-        infoList.add("attribute[Organization Name]");
-        Map deptMap = org.getInfo(context, infoList);
+        try {
+            if (orgId == null || orgId.isEmpty()) {
+                orgMap.put("deptCode", "");//부서코드
+                orgMap.put("deptName", "");//부서명
+            } else {
+                DomainObject org = DomainObject.newInstance(context, orgId);
+                StringList infoList = new StringList();
+                infoList.add("attribute[Organization ID]");
+                infoList.add("attribute[Organization Name]");
+                Map deptMap = org.getInfo(context, infoList);
 
-        orgMap.put("deptCode", (String) deptMap.get("attribute[Organization ID]"));//부서코드
-        orgMap.put("deptName", (String) deptMap.get("attribute[Organization Name]"));//부서명
-
+                orgMap.put("deptCode", (String) deptMap.get("attribute[Organization ID]"));//부서코드
+                orgMap.put("deptName", (String) deptMap.get("attribute[Organization Name]"));//부서명
+            }
+        }catch (Exception e) {
+            e.printStackTrace();
+        }finally {
+            orgMap.put("deptCode", "");//부서코드
+            orgMap.put("deptName", "");//부서명
+        }
         return orgMap;
     }
 
