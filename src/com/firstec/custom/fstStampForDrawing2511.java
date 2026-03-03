@@ -264,8 +264,9 @@ public class fstStampForDrawing2511 {
                 .append(sDepts[0])
                 .append(" ")
                 .append(sDates[0])
-                .append(" Rev.")
-                .append(sRevision);
+       //         .append(" Rev.")
+       //         .append(sRevision)
+        ;
 
         if(!sDates[1].isEmpty()) {
             sbFullText.append("     ");
@@ -274,8 +275,9 @@ public class fstStampForDrawing2511 {
                     .append(sDepts[1])
                     .append(" ")
                     .append(sDates[1])
-                    .append(" Rev.")
-                    .append(sRevision);
+//                    .append(" Rev.")
+//                    .append(sRevision)
+            ;
         }
 
         String fullText = sbFullText.toString();
