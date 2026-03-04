@@ -122,7 +122,8 @@ public class fstStampForDrawing2511 {
             // 중앙의 회사 로고 이미지 추가
             if(companyStampImages != null && companyStampImages.getWidth() > 0 && companyStampImages.getHeight() > 0) {
                 //2025-11-20 ; 중앙으로 위치 ; shpark
-                this.combineImageToPdf(companyStampImages, canvas, xCompany, yCompany);//Center
+                // 2026-03-04 ; 회사로고 이미지 제거 ; shpark
+//                this.combineImageToPdf(companyStampImages, canvas, xCompany, yCompany);//Center
             }
 
             //[S] 하단의 이미지 추가
