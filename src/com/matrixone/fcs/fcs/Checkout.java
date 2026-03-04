@@ -12,6 +12,8 @@ import com.firstec.common.util.fstDomainUtil;
 import com.firstec.constants.FSTConstants;
 import com.firstec.custom.fstStampForDrawing;
 import com.firstec.custom.fstStampForDrawing2511;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.*;
 import com.matrixone.apps.domain.DomainConstants;
 import com.matrixone.apps.domain.DomainObject;
@@ -196,8 +198,19 @@ public class Checkout implements Dispatche {
         ByteArrayOutputStream stampedPdfBytes = new ByteArrayOutputStream();
         PdfReader pdfReader = null;
         PdfWriter pdfWriter = null;
+        int fontSize = 20;
 
         try {
+            // 2026-03-04 ; pdf 문서의 크기를 통해 판단이 필요한 정보 획득 ; shpark
+            pdfReader = new PdfReader(fileInStream);
+            pdfWriter = new PdfWriter(stampedPdfBytes);
+
+            // 1. PdfDocument 객체 생성 (원본 읽기 및 새 문서 쓰기)
+            PdfDocument pdfDoc  = new PdfDocument(pdfReader,pdfWriter);
+
+            fontSize = getFontSizeByPaperType(pdfDoc);
+            logger.info("=== 감지된 용지 규격에 따른 size: {}", fontSize);
+
             String sRevision = cadObj.getInfo(context, FSTConstants.SELECT_REVISION);
 
             fstStampForDrawing2511 sfd = new fstStampForDrawing2511(context);
@@ -278,7 +291,7 @@ public class Checkout implements Dispatche {
                         sDepts = new String[]{sDistDepatName,""};
                     }
                     logger.debug("sDates {}     sDepts {}",sDates,sDepts);
-                    approvalStampImages = sfd.createTopApprovalImage(sPlmObjectNo,sDates,sDepts, sRevision);
+                    approvalStampImages = sfd.createTopApprovalImage(sPlmObjectNo,sDates,sDepts, sRevision,fontSize);
                 } else {
                     logger.debug("DIST object not found for CAD Drawing. Skipping approval stamps, but will add bottom info.");
                 }
@@ -289,11 +302,9 @@ public class Checkout implements Dispatche {
             String pDepartmentName = "test dept";//PersontUtils.getDeptName(context, disUserId);
             BufferedImage bottomImage = sfd.createBottomInfos(pDepartmentName, disUserId);
 
-            pdfReader = new PdfReader(fileInStream);
-            pdfWriter = new PdfWriter(stampedPdfBytes);
 
             //이미지와 PDF 결합
-            sfd.addStampnInfoImageToPdf2511(pdfReader, pdfWriter, approvalStampImages,companyStampImages, bottomImage);
+            sfd.addStampnInfoImageToPdf2511(pdfDoc, approvalStampImages,companyStampImages, bottomImage);
 
         } finally {
             // IMPORTANT: Close streams in finally block to guarantee resource release.
@@ -577,5 +588,60 @@ public class Checkout implements Dispatche {
         return hMap;
     }
 
+    /**
+     * 문서의 종류 판단
+     * @param pdfDoc
+     * @return
+     * @since 2026-03-04
+     * @author shpark
+     */
+    private static int getFontSizeByPaperType(PdfDocument pdfDoc) {
+
+        if (pdfDoc == null || pdfDoc.getNumberOfPages() < 1) {
+            return 20;
+        }
+
+        // 1. 첫 번째 페이지의 크기(MediaBox) 가져오기
+        PdfPage page = pdfDoc.getPage(1);
+        Rectangle pageSize = page.getMediaBox();
+
+        float w = pageSize.getWidth();
+        float h = pageSize.getHeight();
+
+        // 2. 오차 범위를 고려하여 규격 비교
+        // (순서는 큰 용지부터 비교하는 것이 좋습니다)
+        if (isMatch(w, h, PageSize.A0)) return 36;
+        if (isMatch(w, h, PageSize.A1)) return 26;
+        if (isMatch(w, h, PageSize.A2)) return 20;
+        if (isMatch(w, h, PageSize.A3)) return 20;
+        if (isMatch(w, h, PageSize.A4)) return 20;
+//        if (isMatch(w, h, PageSize.LETTER)) return "Letter";
+//        if (isMatch(w, h, PageSize.LEGAL)) return "Legal";
+
+        // 일치하는 규격이 없을 경우 1반환
+        return 20;
+    }
+
+    /**
+     * epsilon(오차범위) 내에서 용지 크기가 일치하는지 확인하는 헬퍼 메서드
+     * @param w
+     * @param h
+     * @param target
+     * @return
+     * @since 2026-03-04
+     * @author shpark
+     */
+    private static boolean isMatch(float w, float h, Rectangle target) {
+        float targetW = target.getWidth();
+        float targetH = target.getHeight();
+        float epsilon = 15.0f; // 5mm 허용 오차 (PDF 생성 툴에 따른 미세 차이 방지)
+
+        // 정방향(Portrait) 비교
+        boolean portrait = Math.abs(w - targetW) < epsilon && Math.abs(h - targetH) < epsilon;
+        // 회전방향(Landscape) 비교
+        boolean landscape = Math.abs(w - targetH) < epsilon && Math.abs(h - targetW) < epsilon;
+
+        return portrait || landscape;
+    }
 
 }

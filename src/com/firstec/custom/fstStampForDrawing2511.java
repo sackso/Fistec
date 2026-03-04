@@ -4,11 +4,9 @@ import com.firstec.common.util.fstDomainUtil;
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.geom.Rectangle;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfPage;
-import com.itextpdf.kernel.pdf.PdfReader;
-import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.*;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.kernel.pdf.xobject.PdfImageXObject;
 import com.matrixone.apps.domain.util.EnoviaResourceBundle;
@@ -82,12 +80,13 @@ public class fstStampForDrawing2511 {
      * @since 2025-11-20
      * @author shpark
      */
-    public void addStampnInfoImageToPdf2511(PdfReader pdfReader, PdfWriter pdfWriter
+    public void addStampnInfoImageToPdf2511(PdfDocument pdfDoc
             , BufferedImage  approvalStampImages,BufferedImage companyStampImages
             , BufferedImage bottomImage) throws Exception {
 
         // 1. PdfDocument 객체 생성 (원본 읽기 및 새 문서 쓰기)
-        PdfDocument pdfDoc  = new PdfDocument(pdfReader,pdfWriter);
+//        PdfDocument pdfDoc  = new PdfDocument(pdfReader,pdfWriter);
+
         // 첫 번째 페이지 객체를 가져옵니다.
         // iText7은 페이지 번호가 1부터 시작합니다.
         PdfPage page = pdfDoc.getPage(1);
@@ -100,6 +99,7 @@ public class fstStampForDrawing2511 {
         float heightInPt = pageSize.getHeight();
 
 //        logger.debug("페이지 너비: w={}pt h={} " , widthInPt ,heightInPt);
+
 
         //상단 결재정보 x,y
         float xApproval = 30f;
@@ -221,23 +221,23 @@ public class fstStampForDrawing2511 {
      * @since 2025-11-20
      * @author shpark
      */
-    public BufferedImage createTopApprovalImage( String sPlmObjectNo , String[] sDates,String[] sDepts,String sRevision) throws Exception {
+    public BufferedImage createTopApprovalImage( String sPlmObjectNo , String[] sDates,String[] sDepts,String sRevision,int fontSize) throws Exception {
         //투명도 (Alpha) 값: 0 (완전 투명) ~ 255 (완전 불투명)
         int alpha = 64; // 예시: 50% 투명도
 
         // Font.PLAIN (보통), Font.ITALIC (기울임), Font.BOLD (굵게)
-        Font textFont = new Font("Malgun Gothic", Font.PLAIN, 12); // Bold 아님, 크기 12
+        Font textFont = new Font("Malgun Gothic", Font.PLAIN, fontSize); // Bold 아님, 크기 12
 
 
         // 1. 이미지의 전체 사각형 크기 설정
         // 텍스트 길이에 맞춰 적절한 크기로 조정 (충분히 크게 설정)
-        int width = 850;
-        int height = 50; // 한 줄 텍스트이므로 높이를 작게 설정
+        int width = 1500;
+        int height = 70; // 한 줄 텍스트이므로 높이를 작게 설정
 
         // --- ★ 텍스트 출력 위치 제어 변수 설정 ★ ---
         // 텍스트가 캔버스 내에서 시작할 위치를 0, 0을 기준으로 이동시킵니다.
         int offsetX = 10;
-        int offsetY = 30; // 텍스트를 위쪽에서 조금 내려서 그립니다.
+        int offsetY = fontSize+30; // 텍스트를 위쪽에서 조금 내려서 그립니다.
         // ------------------------------------------
 
         // 2. BufferedImage 생성 (배경 투명)
