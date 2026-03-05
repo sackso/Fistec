@@ -155,6 +155,7 @@ public class Checkout implements Dispatche {
         String appDir           = request.getParameter("appDir");
         String trackUsagePartId = request.getParameter("trackUsagePartId");
         String stDocId          = "";
+        String sRevision        = "";
         // 2025-10-30 ;[S] 일괄다운로드의 경우 fstBatchFileDownloadProcess.jsp 에서 값을 가져오도록 개선 ; shpark
         try {
 //            HashMap ccd = (HashMap) request.getSession().getAttribute("_STAMP_INFO");
@@ -179,24 +180,26 @@ public class Checkout implements Dispatche {
         logger.debug("context.getUser() {} ", context.getUser());
         logger.debug("getCADDrawingObject() START " );
         DomainObject cadObj = getCADDrawingObject(context, item, stDocId);
-        // STODO ; 2026-03-04 ;DOC 문서의 PDF 파일에도 watermark 를 찍기 위함  ; shpark
         DomainObject docObj = getDocumentObject(context, item, stDocId);
         logger.debug("getCADDrawingObject() END " );
 
-        // CAD Drawing,fstDocument 객체를 찾지 못하면
-        if (cadObj == null ) {
-            logger.debug("CAD Drawing object not found for item: {}", item.getPath());
-            if(docObj == null) {
-                return fileInStream;
-            }else{
-                return fileInStream;
-            }
+        // 첨부파일을 포함하고 있는 CAD Drawing,fstDocument 객체를 찾지 못하면 바로 반환
+        if (cadObj == null && docObj == null) {
+            logger.error("'CAD Drawing && fstDocument' object not found for item: {}", item.getPath());
+            return fileInStream;
         }else {
-
-            String sType = cadObj.getInfo(context, DomainObject.SELECT_TYPE);
+            String sCADType = "";
+            String sDOCType = "";
+            if(cadObj != null) {
+                sCADType = cadObj.getInfo(context, DomainObject.SELECT_TYPE);
+                sRevision = cadObj.getInfo(context, FSTConstants.SELECT_REVISION);
+            }
+            if(docObj != null) {
+                sDOCType = docObj.getInfo(context, DomainObject.SELECT_TYPE);
+            }
             // CAD Drawing 타입이 아니면 원본 스트림 반환
-            if (!DomainConstants.TYPE_CAD_DRAWING.equals(sType)) {
-                logger.debug("Stamping conditions not met: Type={} is not CAD Drawing for item: {}", sType, item.getPath());
+            if (!(DomainConstants.TYPE_CAD_DRAWING.equals(sCADType) || FSTConstants.TYPE_FSTDOCUMENT.equals(sDOCType)) ) {
+                logger.debug("Stamping conditions not met: CADType={}, DOCType={} is not CAD Drawing for item: {}", sCADType,sDOCType, item.getPath());
                 return fileInStream;
             }
         }
@@ -207,9 +210,14 @@ public class Checkout implements Dispatche {
         int fontSize = 10;
         int leftMargin = 30;
 
+        try{
+            pdfReader = new PdfReader(fileInStream);
+        }catch (Exception e){
+            return fileInStream;
+        }
+
         try {
             // 2026-03-04 ; pdf 문서의 크기를 통해 판단이 필요한 정보 획득 ; shpark
-            pdfReader = new PdfReader(fileInStream);
             pdfWriter = new PdfWriter(stampedPdfBytes);
 
             // 1. PdfDocument 객체 생성 (원본 읽기 및 새 문서 쓰기)
@@ -218,7 +226,6 @@ public class Checkout implements Dispatche {
             fontSize = getFontSizeByPaperType(pdfDoc);
             logger.info("=== 감지된 용지 규격에 따른 size: {}", fontSize);
 
-            String sRevision = cadObj.getInfo(context, FSTConstants.SELECT_REVISION);
 
             fstStampForDrawing2511 sfd = new fstStampForDrawing2511(context);
             sfd.setbImageFileCreate(false);
