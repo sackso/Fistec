@@ -179,26 +179,33 @@ public class Checkout implements Dispatche {
         logger.debug("context.getUser() {} ", context.getUser());
         logger.debug("getCADDrawingObject() START " );
         DomainObject cadObj = getCADDrawingObject(context, item, stDocId);
+        // STODO ; 2026-03-04 ;DOC 문서의 PDF 파일에도 watermark 를 찍기 위함  ; shpark
+        DomainObject docObj = getDocumentObject(context, item, stDocId);
         logger.debug("getCADDrawingObject() END " );
 
-        // CAD Drawing 객체를 찾지 못했거나
-        if (cadObj == null) {
+        // CAD Drawing,fstDocument 객체를 찾지 못하면
+        if (cadObj == null ) {
             logger.debug("CAD Drawing object not found for item: {}", item.getPath());
-            return fileInStream;
-        }
+            if(docObj == null) {
+                return fileInStream;
+            }else{
+                return fileInStream;
+            }
+        }else {
 
-        String sType = cadObj.getInfo(context, DomainObject.SELECT_TYPE);
-        // CAD Drawing 타입이 아니면 원본 스트림 반환
-        if (!DomainConstants.TYPE_CAD_DRAWING.equals(sType)) {
-            logger.debug("Stamping conditions not met: Type={} is not CAD Drawing for item: {}", sType, item.getPath());
-            return fileInStream;
+            String sType = cadObj.getInfo(context, DomainObject.SELECT_TYPE);
+            // CAD Drawing 타입이 아니면 원본 스트림 반환
+            if (!DomainConstants.TYPE_CAD_DRAWING.equals(sType)) {
+                logger.debug("Stamping conditions not met: Type={} is not CAD Drawing for item: {}", sType, item.getPath());
+                return fileInStream;
+            }
         }
-
         // --- Stamping Logic Starts Here (Replaced temporary file with in-memory stream) ---
         ByteArrayOutputStream stampedPdfBytes = new ByteArrayOutputStream();
         PdfReader pdfReader = null;
         PdfWriter pdfWriter = null;
-        int fontSize = 20;
+        int fontSize = 10;
+        int leftMargin = 30;
 
         try {
             // 2026-03-04 ; pdf 문서의 크기를 통해 판단이 필요한 정보 획득 ; shpark
@@ -291,7 +298,8 @@ public class Checkout implements Dispatche {
                         sDepts = new String[]{sDistDepatName,""};
                     }
                     logger.debug("sDates {}     sDepts {}",sDates,sDepts);
-                    approvalStampImages = sfd.createTopApprovalImage(sPlmObjectNo,sDates,sDepts, sRevision,fontSize);
+                    leftMargin = getLeftForApprovalImageByPaperType(pdfDoc);
+                    approvalStampImages = sfd.createTopApprovalImage(sPlmObjectNo,sDates,sDepts, sRevision,fontSize,leftMargin);
                 } else {
                     logger.debug("DIST object not found for CAD Drawing. Skipping approval stamps, but will add bottom info.");
                 }
@@ -517,6 +525,41 @@ public class Checkout implements Dispatche {
         return cadObj;
     }
 
+    /**
+     * 연결된 Doc 문서를 반환
+     * @param context
+     * @param item
+     * @param stDocId
+     * @return
+     * @throws Exception
+     * @since 2026-03-04
+     * @author shpark
+     */
+    private static DomainObject getDocumentObject(Context context,Item item,String stDocId) throws Exception {
+        String type = FSTConstants.TYPE_FSTDOCUMENT;
+        String name = item.getPath();
+        if(item.getPath() == null || item.getPath().isEmpty() || item.getPath().equals("null")) {
+            try{
+                DomainObject __dObj = new DomainObject(stDocId);
+                String __type = __dObj.getInfo(context, FSTConstants.SELECT_TYPE);
+                String __name = __dObj.getInfo(context, FSTConstants.SELECT_NAME);
+                name = __name;
+                if(!type.equals(__type)) {
+                    return  null;
+                }
+            }catch (Exception e){
+//                e.printStackTrace();
+            }
+        }
+        String rev = "*";
+        String where = "format[generic].file.locationfile == '" + item.getHashName() + "'";
+        logger.debug("getDocumentObject type:{}, name:{}, rev:{}, where:{}",type,name,rev,where);
+        DomainObject docObj = fstDomainUtil.getObjectByTNR(context,type,name,rev,where);
+        logger.debug("docObj:{}",docObj);
+        return docObj;
+    }
+
+
     private static Context getContext(FcsContext fcsContext) throws Exception {
 //        Context context = Framework.getContext(fcsContext.getRequestObject().getSession());
         Context context = fstDomainUtil.getContext();
@@ -598,7 +641,7 @@ public class Checkout implements Dispatche {
     private static int getFontSizeByPaperType(PdfDocument pdfDoc) {
 
         if (pdfDoc == null || pdfDoc.getNumberOfPages() < 1) {
-            return 20;
+            return 10;
         }
 
         // 1. 첫 번째 페이지의 크기(MediaBox) 가져오기
@@ -612,15 +655,54 @@ public class Checkout implements Dispatche {
         // (순서는 큰 용지부터 비교하는 것이 좋습니다)
         if (isMatch(w, h, PageSize.A0)) return 36;
         if (isMatch(w, h, PageSize.A1)) return 26;
-        if (isMatch(w, h, PageSize.A2)) return 20;
-        if (isMatch(w, h, PageSize.A3)) return 20;
-        if (isMatch(w, h, PageSize.A4)) return 20;
+        if (isMatch(w, h, PageSize.A2)) return 18;
+        if (isMatch(w, h, PageSize.A3)) return 14;
+        if (isMatch(w, h, PageSize.A4)) return 10;
 //        if (isMatch(w, h, PageSize.LETTER)) return "Letter";
 //        if (isMatch(w, h, PageSize.LEGAL)) return "Legal";
 
         // 일치하는 규격이 없을 경우 1반환
-        return 20;
+        return 10;
     }
+
+    /**
+     * 문서종류에 따라 결재정보의 출력 left 위치
+     * @param pdfDoc
+     * @return
+     * @since 2026-03-05
+     * @author shpark
+     */
+    private static int getLeftForApprovalImageByPaperType(PdfDocument pdfDoc) {
+
+        if (pdfDoc == null || pdfDoc.getNumberOfPages() < 1) {
+            return 30;
+        }
+
+        // 1. 첫 번째 페이지의 크기(MediaBox) 가져오기
+        PdfPage page = pdfDoc.getPage(1);
+        Rectangle pageSize = page.getMediaBox();
+
+        float w = pageSize.getWidth();
+        float h = pageSize.getHeight();
+
+        int iRet = (int) (w * 0.03);
+        logger.debug("getLeftForApprovalImageByPaperType w:{}, h:{}, iRet:{}",w,h,iRet);
+        return iRet;
+
+        // 2. 오차 범위를 고려하여 규격 비교
+        // (순서는 큰 용지부터 비교하는 것이 좋습니다)
+//        if (isMatch(w, h, PageSize.A0)) return 36;
+//        if (isMatch(w, h, PageSize.A1)) return 26;
+//        if (isMatch(w, h, PageSize.A2)) return 18;
+//        if (isMatch(w, h, PageSize.A3)) return 14;
+//        if (isMatch(w, h, PageSize.A4)) return 10;
+//        if (isMatch(w, h, PageSize.LETTER)) return "Letter";
+//        if (isMatch(w, h, PageSize.LEGAL)) return "Legal";
+
+        // 일치하는 규격이 없을 경우 1반환
+//        return 30;
+    }
+
 
     /**
      * epsilon(오차범위) 내에서 용지 크기가 일치하는지 확인하는 헬퍼 메서드

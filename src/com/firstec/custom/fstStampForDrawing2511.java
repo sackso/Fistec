@@ -71,8 +71,6 @@ public class fstStampForDrawing2511 {
 
     /**
      * pdf 파일에 이미지를 추가
-     * @param pdfReader
-     * @param pdfWriter
      * @param approvalStampImages
      * @param companyStampImages
      * @param bottomImage
@@ -221,7 +219,8 @@ public class fstStampForDrawing2511 {
      * @since 2025-11-20
      * @author shpark
      */
-    public BufferedImage createTopApprovalImage( String sPlmObjectNo , String[] sDates,String[] sDepts,String sRevision,int fontSize) throws Exception {
+    public BufferedImage createTopApprovalImage( String sPlmObjectNo , String[] sDates,String[] sDepts
+            ,String sRevision,int fontSize,int leftMargin) throws Exception {
         //투명도 (Alpha) 값: 0 (완전 투명) ~ 255 (완전 불투명)
         int alpha = 64; // 예시: 50% 투명도
 
@@ -236,7 +235,7 @@ public class fstStampForDrawing2511 {
 
         // --- ★ 텍스트 출력 위치 제어 변수 설정 ★ ---
         // 텍스트가 캔버스 내에서 시작할 위치를 0, 0을 기준으로 이동시킵니다.
-        int offsetX = 10;
+        int offsetX = leftMargin;//10;
         int offsetY = fontSize+30; // 텍스트를 위쪽에서 조금 내려서 그립니다.
         // ------------------------------------------
 
